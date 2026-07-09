@@ -1,6 +1,6 @@
 import env_config  # noqa: F401
-from task_1.cv_parser import parse_cv
+from task_1.cv_parser import CVs_parser
 
 if __name__ == "__main__":
-    response = parse_cv()
-    print(response)
+    cvs_parser = CVs_parser()
+    cvs_parser.gather_cvs_info("data/CVs")
