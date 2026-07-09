@@ -5,5 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "instructor>=1.15.4",
+    "dotenv>=0.9.9",
+    "instructor[anthropic,google-genai]>=1.15.4",
 ]
