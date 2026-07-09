@@ -1,0 +1,1 @@
+# Script for parsing and extracting the data from a series of CVs and putting it into a JSON file.
