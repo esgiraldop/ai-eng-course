@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Literal
 
 class Applicant(BaseModel):
     name: str
@@ -7,3 +8,5 @@ class Applicant(BaseModel):
     skills: list[str]
     experience: list[str]
     education: list[str]
+
+type ApplicantField = Literal[*Applicant.model_fields.keys()]  # type: ignore
