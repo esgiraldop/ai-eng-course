@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 import instructor
 from instructor.processing.multimodal import PDF
-from custom_types import Applicant, ApplicantField
+from custom_types import Applicant, Position, ApplicantField, PositionField
 from utils import save_to_json
 
 class DocsParser:
@@ -26,7 +26,7 @@ class DocsParser:
         self.client = instructor.from_provider(llm_model)
 
 
-    def parse_doc(self, path: str, format: str, prompt) -> Applicant:
+    def parse_doc(self, path: str, format: str, prompt) -> Applicant | Position:
         return self.client.create(
             response_model=self.response_model,
             messages=[
@@ -40,7 +40,7 @@ class DocsParser:
             ]
         )
 
-    def gather_docs_info(self, dir: str, doc_output: list[ApplicantField], prompt: str) -> list[Applicant]:
+    def gather_docs_info(self, dir: str, doc_output: list[ApplicantField] | list[PositionField], prompt: str) -> list[Applicant] | list[Position]:
         data = []
         counter = 0
         num_files = len(os.listdir(dir))
@@ -55,7 +55,8 @@ class DocsParser:
                 )
             counter += 1
             data.append({field: getattr(response, field) for field in doc_output})
-            print(f"{counter} out of {num_files} files parsed")
+
+            print(f"File {file_name} was parsed. {counter}/{num_files} files parsed.")
             if counter == 3:
                 # TODO: for debugging purposes
                 break
