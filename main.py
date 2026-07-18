@@ -15,7 +15,7 @@ if __name__ == "__main__":
     cvs_parser = DocsParser(
         response_model= Applicant,
         llm_models=llm_models,
-        # llm_model="google/gemini-3.5-flash"
+        path="data/cv_extracted_info.json"
         )
     cvs_data = cvs_parser.gather_docs_info(
         dir = "data/CVs",
@@ -24,7 +24,6 @@ if __name__ == "__main__":
         max_docs = -1
         )
     cvs_parser.save_extracted_data(
-        path="data/cv_extracted_info.json",
         data = cvs_data
         )
 
@@ -32,7 +31,7 @@ if __name__ == "__main__":
     positions_parser = DocsParser(
         response_model= Position,
         llm_models=llm_models,
-        # llm_model="google/gemini-3.5-flash"
+        path="data/positions_extracted_info.json",
         )
     positions_data = positions_parser.gather_docs_info(
         dir = "data/Vacantes",
@@ -41,6 +40,5 @@ if __name__ == "__main__":
         max_docs = -1
         )
     positions_parser.save_extracted_data(
-        path="data/positions_extracted_info.json",
         data = positions_data
         )
