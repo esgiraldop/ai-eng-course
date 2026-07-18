@@ -6,5 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "dotenv>=0.9.9",
+    "groq>=1.5.0",
     "instructor[anthropic,google-genai]>=1.15.4",
+    "qdrant-client>=1.18.0",
+    "sentence-transformers>=5.6.0",
 ]
