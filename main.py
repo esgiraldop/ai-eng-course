@@ -29,7 +29,7 @@ if __name__ == "__main__":
     positions_parser = DocsParser(
         response_model= Position,
         llm_models=llm_models,
-        path="data/positions_extracted_info.json",
+        path="data/job_descriptions_extracted_info.json",
         )
     positions_data = positions_parser.gather_docs_info(
         dir = "data/Vacantes",
