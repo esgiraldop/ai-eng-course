@@ -33,6 +33,23 @@ class DocsParser:
         
         while len(self.llm_models) > 0:
             client = instructor.from_provider(self.llm_models[0])
+            
+            # Groq models expect a 'document' type rather than 'file'
+            if "groq" in self.llm_models[0].lower() and format == "pdf":
+                import base64
+                with open(path, "rb") as f:
+                    base64_data = base64.b64encode(f.read()).decode("utf-8")
+                content_payload = {
+                    "type": "document",
+                    "document": {
+                        "data": {
+                            "url": f"data:application/pdf;base64,{base64_data}"
+                        }
+                    }
+                }
+            else:
+                content_payload = self.reader[format](path)
+
             try: 
                 response = client.create(
                     response_model=self.response_model,
@@ -41,7 +58,7 @@ class DocsParser:
                             "role": "user",
                             "content": [
                                 prompt,
-                                self.reader[format](path)
+                                content_payload
                             ]
                         }
                     ]
