@@ -4,10 +4,8 @@ from custom_types import Applicant, Position
 
 llm_models = [
     "google/gemini-2.5-flash",
-    "google/gemini-3-flash",
     "google/gemini-3.5-flash",
-    "groq/llama-3.1-8b-instant",
-    "groq/llama-3.3-70b-versatile"
+    "google/gemini-2.5-pro"
 ]
 
 if __name__ == "__main__":
