@@ -10,10 +10,11 @@ llm_models = [
 
 if __name__ == "__main__":
     # Parsing CVs
+    output_filename = "data/cv_extracted_info.json"
     cvs_parser = DocsParser(
         response_model= Applicant,
         llm_models=llm_models,
-        path="data/cv_extracted_info.json"
+        path=output_filename
         )
     cvs_data = cvs_parser.gather_docs_info(
         dir = "data/CVs",
@@ -24,6 +25,12 @@ if __name__ == "__main__":
     cvs_parser.save_extracted_data(
         data = cvs_data
         )
+    # Loading cvs and translating to English
+    cvs_parser.process_and_translate_docs(
+        output_filename = "data/cv_extracted_info_eng.json",
+        max_docs = 2,
+        file_path = output_filename
+    )
 
     # Parsing "Vacantes"
     positions_parser = DocsParser(
