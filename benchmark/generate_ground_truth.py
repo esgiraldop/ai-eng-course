@@ -31,6 +31,7 @@ import env_config  # Load environment variables (.env)
 # ------------------------------------------------------------------
 class CVScore(BaseModel):
     cv_id: str = Field(description="The unique identifier or index of the CV being evaluated")
+    file_name: str = Field(default="", description="The file name of the candidate's CV document")
     score: int = Field(description="Relevance score: 0 = Irrelevant, 1 = Low Match, 2 = Good Match, 3 = Perfect Match")
     reasoning: str = Field(description="1-sentence justification for the assigned score")
 
@@ -105,12 +106,16 @@ def generate_ground_truth(
         cv_batches = list(chunk_list(cv_dataset, batch_size))
 
         for batch in tqdm(cv_batches, desc=f"Scoring batches for {jd_id}"):
+            # Create a lookup mapping for candidate file names
+            cv_file_map = {str(cv.get("id") or cv.get("cv_id")): cv.get("file_name", "") for cv in batch}
+
             # Prepare minimal CV payload to save tokens
             batch_payload = []
             for cv in batch:
                 cv_id_val = str(cv.get("id") or cv.get("cv_id"))
                 batch_payload.append({
                     "cv_id": cv_id_val,
+                    "file_name": cv.get("file_name", ""),
                     "candidate_data": cv
                 })
 
@@ -132,7 +137,7 @@ def generate_ground_truth(
             - Score 2: Good Match (solid core skills match, reasonable experience)
             - Score 3: Perfect Match (strong direct technical overlap, years of experience, and role fit)
 
-            Output evaluations for ALL candidates in this batch.
+            Output evaluations for ALL candidates in this batch, including their cv_id and file_name.
             """
 
             max_retries = 3
@@ -160,7 +165,10 @@ def generate_ground_truth(
 
             if batch_results and batch_results.evaluations:
                 for eval_item in batch_results.evaluations:
-                    jd_scores.append(eval_item.model_dump())
+                    eval_dict = eval_item.model_dump()
+                    if not eval_dict.get("file_name"):
+                        eval_dict["file_name"] = cv_file_map.get(eval_dict["cv_id"], "")
+                    jd_scores.append(eval_dict)
             else:
                 print(f"[Error] Failed to get evaluations for current batch after {max_retries} attempts.")
 
