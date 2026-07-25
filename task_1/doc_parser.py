@@ -147,9 +147,10 @@ class DocsParser:
                 break
         return data
 
-    def save_extracted_data(self, data: list[Applicant]):
-        print("\nExporting files to json format...\n")
-        save_to_json(self.output_filename, data)
+    def save_extracted_data(self, data: list[Applicant] | list[Position] | list[dict], filename: str | None = None):
+        target_filename = filename or self.output_filename
+        print(f"\nExporting files to json format at '{target_filename}'...\n")
+        save_to_json(target_filename, data)
         print("docs contents exported successfully")
 
     def process_and_translate_docs(
@@ -231,8 +232,7 @@ class DocsParser:
             time.sleep(0.2)
 
         # Save standardized English JSON array
-        with open(output_filename, "w", encoding="utf-8") as f:
-            json.dump(processed_docs, f, ensure_ascii=False)
+        save_to_json(output_filename, processed_docs)
 
         print(f"\nCompleted! Standardized English doc dataset saved to '{output_filename}'.")
         
