@@ -174,7 +174,7 @@ def generate_ground_truth(
             {jd_description}
 
             ### CANDIDATE BATCH ({len(batch)} candidates):
-            {json.dumps(batch_payload, indent=2)}
+            {json.dumps(batch_payload, indent=2, ensure_ascii=False)}
 
             ### SCORING GUIDELINES:
             - Score 0: Irrelevant (wrong field or missing core mandatory requirements)
@@ -224,14 +224,14 @@ def generate_ground_truth(
                 "evaluations": jd_scores
             }
             with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(ground_truth_matrix, f, indent=2)
+                json.dump(ground_truth_matrix, f, indent=2, ensure_ascii=False)
 
             # Brief pause to respect rate limits
             time.sleep(0.5)
 
     # Save the final aggregated benchmark matrix
     with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(ground_truth_matrix, f, indent=2)
+        json.dump(ground_truth_matrix, f, indent=2, ensure_ascii=False)
 
     print(f"\nSuccessfully generated/synced ground truth matrix! Saved to '{output_file}'.")
 
