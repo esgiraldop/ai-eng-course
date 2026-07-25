@@ -18,11 +18,20 @@ Why Batch Processing (10 CVs/call) vs. Loading All 100 CVs at Once:
 import json
 import time
 import argparse
+import os
+import sys
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from tqdm import tqdm
 from google import genai
 from google.genai import types
+
+# Ensure project root is in sys.path when executing from subdirectories
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import env_config  # Load environment variables (.env)
 
 
@@ -59,7 +68,8 @@ def generate_ground_truth(
     max_cvs: Optional[int] = None,
     max_jds: Optional[int] = None,
     batch_size: int = 10,
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-2.5-flash",
+    sync: bool = True
 ):
     # Initialize the GenAI client (picks up GEMINI_API_KEY env var)
     client = genai.Client()
@@ -91,19 +101,54 @@ def generate_ground_truth(
         job_descriptions = job_descriptions[:max_jds]
         print(f"Processing top {len(job_descriptions)} Job Descriptions (limited by max_jds={max_jds}).")
 
+    # Load existing ground truth matrix if sync is enabled
     ground_truth_matrix = {}
+    if sync and os.path.exists(output_file):
+        try:
+            with open(output_file, "r", encoding="utf-8") as f:
+                ground_truth_matrix = json.load(f)
+            print(f"Sync enabled: Loaded existing ground truth matrix with {len(ground_truth_matrix)} Job Description(s) from '{output_file}'.")
+        except Exception as e:
+            print(f"Sync enabled, but failed to read '{output_file}': {e}. Starting with fresh matrix.")
+            ground_truth_matrix = {}
 
     for jd in job_descriptions:
         jd_id = jd.get("id") or jd.get("jd_id")
         jd_title = jd.get("title") or jd.get("job_title", "")
         jd_description = jd.get("description") or jd.get("role_description", "")
 
+        existing_entry = ground_truth_matrix.get(jd_id, {})
+        jd_scores = list(existing_entry.get("evaluations", []))
+
+        # Collect already evaluated CV IDs and file names for sync filtering
+        evaluated_identifiers = set()
+        if sync and jd_scores:
+            for eval_item in jd_scores:
+                if eval_item.get("cv_id"):
+                    evaluated_identifiers.add(str(eval_item["cv_id"]))
+                if eval_item.get("file_name"):
+                    evaluated_identifiers.add(str(eval_item["file_name"]))
+
+        # Determine remaining CVs to evaluate for this JD
+        cvs_to_evaluate = []
+        for cv in cv_dataset:
+            cv_id_val = str(cv.get("id") or cv.get("cv_id"))
+            cv_file_name = str(cv.get("file_name") or "")
+            if sync and (cv_id_val in evaluated_identifiers or (cv_file_name and cv_file_name in evaluated_identifiers)):
+                continue
+            cvs_to_evaluate.append(cv)
+
+        if not cvs_to_evaluate:
+            print(f"\n[Sync] Skipping JD [{jd_id}] '{jd_title}' — all {len(cv_dataset)} target CVs are already evaluated.")
+            continue
+
         print(f"\n==================================================")
         print(f"Evaluating Job Description: [{jd_id}] {jd_title}")
+        if sync and len(jd_scores) > 0:
+            print(f"Sync status: {len(jd_scores)} CVs already evaluated. Remaining to evaluate: {len(cvs_to_evaluate)} CVs.")
         print(f"==================================================")
 
-        jd_scores = []
-        cv_batches = list(chunk_list(cv_dataset, batch_size))
+        cv_batches = list(chunk_list(cvs_to_evaluate, batch_size))
 
         for batch in tqdm(cv_batches, desc=f"Scoring batches for {jd_id}"):
             # Create a lookup mapping for candidate file names
@@ -172,20 +217,23 @@ def generate_ground_truth(
             else:
                 print(f"[Error] Failed to get evaluations for current batch after {max_retries} attempts.")
 
+            # Persist progress after each batch for resilience
+            ground_truth_matrix[jd_id] = {
+                "title": jd_title,
+                "job_description": jd_description,
+                "evaluations": jd_scores
+            }
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(ground_truth_matrix, f, indent=2)
+
             # Brief pause to respect rate limits
             time.sleep(0.5)
 
-        ground_truth_matrix[jd_id] = {
-            "title": jd_title,
-            "job_description": jd_description,
-            "evaluations": jd_scores
-        }
-
-    # Save the aggregated benchmark matrix
+    # Save the final aggregated benchmark matrix
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(ground_truth_matrix, f, indent=2)
 
-    print(f"\nSuccessfully generated ground truth matrix! Saved to '{output_file}'.")
+    print(f"\nSuccessfully generated/synced ground truth matrix! Saved to '{output_file}'.")
 
 
 # ------------------------------------------------------------------
@@ -195,13 +243,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Generate ground-truth benchmark matrix by scoring candidate CVs against Job Descriptions using Gemini."
     )
-    parser.add_argument("--cv-file", type=str, default="data/cv_extracted_info.json", help="Path to CV extracted info JSON file")
+    parser.add_argument("--cv-file", type=str, default="data/cv_extracted_info_eng.json", help="Path to CV extracted info JSON file")
     parser.add_argument("--jd-file", type=str, default="data/job_descriptions_train_batch.json", help="Path to Job Descriptions JSON file")
     parser.add_argument("--output-file", type=str, default="data/ground_truth_matrix.json", help="Path to save ground truth matrix JSON output")
     parser.add_argument("--max-cvs", "-c", type=int, default=None, help="Maximum number of CVs to evaluate (for testing/cost control)")
     parser.add_argument("--max-jds", "-j", type=int, default=None, help="Maximum number of Job Descriptions to process (for testing/cost control)")
     parser.add_argument("--batch-size", "-b", type=int, default=10, help="Number of CVs per LLM evaluation call")
     parser.add_argument("--model-name", "-m", type=str, default="gemini-2.5-flash", help="Gemini model name to use for scoring")
+    parser.add_argument("--sync", action="store_true", default=True, help="Sync and resume from existing output file if present (default: True)")
+    parser.add_argument("--no-sync", action="store_false", dest="sync", help="Disable sync and regenerate output file from scratch")
 
     args = parser.parse_args()
 
@@ -212,5 +262,6 @@ if __name__ == "__main__":
         max_cvs=args.max_cvs,
         max_jds=args.max_jds,
         batch_size=args.batch_size,
-        model_name=args.model_name
+        model_name=args.model_name,
+        sync=args.sync
     )
