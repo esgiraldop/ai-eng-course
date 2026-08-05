@@ -17,6 +17,14 @@ from utils import save_to_json
 
 
 class DocsParser:
+    """A parser for extracting structured data from documents using LLMs and translating content.
+
+    Handles document reading, extraction via instructor-wrapped LLM providers with automatic retry
+    and fallback mechanisms, sync capabilities to skip already processed files, and translation/standardization.
+
+    Attributes:
+        reader (dict): Mapping of document formats to their respective file reader callables or descriptors.
+    """
 
     reader = {
         "pdf": PDF.from_path,
@@ -30,12 +38,32 @@ class DocsParser:
         llm_models: list[str],
         path: str
     ):
+        """Initialize the DocsParser with a target schema, LLM providers list, and output filepath.
+
+        Args:
+            response_model: Pydantic model class (Applicant or Position) defining the extraction schema.
+            llm_models: List of model provider strings to attempt sequentially.
+            path: Default destination JSON file path for saving extracted results.
+        """
         self.response_model = response_model
         self.llm_models = llm_models
         self.output_filename = path
 
     def parse_doc(self, path: str, format: str, prompt: str) -> Applicant | Position:
-        
+        """Parse a single document file using the configured LLM models.
+
+        Iterates through `llm_models` list sequentially if errors occur until a successful response
+        is retrieved or all models fail.
+
+        Args:
+            path: Path to the input document file.
+            format: Document format extension (e.g., 'pdf').
+            prompt: Prompt instruction string guiding the extraction.
+
+        Returns:
+            An instance of response_model (Applicant or Position) with extracted data,
+            or None if all models fail.
+        """
         while len(self.llm_models) > 0:
             client = instructor.from_provider(self.llm_models[0])
             
@@ -82,6 +110,14 @@ class DocsParser:
                 return response
 
     def get_saved_docs(self, filename: str | None = None) -> list[Applicant] | list[Position] | list[dict]:
+        """Load previously saved extracted document records from a JSON file.
+
+        Args:
+            filename: Path to JSON file. Defaults to `self.output_filename` if None.
+
+        Returns:
+            List of parsed document dicts/models if file exists, or an empty list.
+        """
         target_filename = filename or self.output_filename
         if os.path.exists(target_filename):
             with open(target_filename, "r", encoding="utf-8") as file:
@@ -91,6 +127,14 @@ class DocsParser:
             return []
 
     def prepare_sync(self, filename: str | None = None) -> tuple[list[dict], set[str]]:
+        """Retrieve existing saved document records and extract their unique identifiers for sync logic.
+
+        Args:
+            filename: Path to JSON file. Defaults to `self.output_filename` if None.
+
+        Returns:
+            A tuple of (saved_files_data, doc_identifiers) where doc_identifiers is a set of file/doc IDs.
+        """
         saved_files_data = self.get_saved_docs(filename)
         if saved_files_data:
             doc_identifiers = set()
@@ -109,6 +153,21 @@ class DocsParser:
         self, dir: str, doc_output: list[ApplicantField] | list[PositionField],
         prompt: str, max_docs: int, sync: bool = True
         ) -> list[Applicant] | list[Position]:
+        """Iterate over document files in a directory, parse them, and extract specified fields.
+
+        Args:
+            dir: Directory path containing target documents.
+            doc_output: List of fields (ApplicantField or PositionField) to extract from the model output.
+            prompt: Extraction prompt instructions for the LLM.
+            max_docs: Maximum number of documents to parse. Use -1 for unlimited processing.
+            sync: If True, skip files that have already been saved in the output file.
+
+        Returns:
+            List of dictionaries containing extracted field data and document file names.
+
+        Raises:
+            ValueError: If `max_docs` is set to 0.
+        """
         if max_docs == 0:
             raise ValueError("max_docs cannot be zero.")
         data = []
@@ -148,6 +207,12 @@ class DocsParser:
         return data
 
     def save_extracted_data(self, data: list[Applicant] | list[Position] | list[dict], filename: str | None = None):
+        """Save extracted document data to a JSON file.
+
+        Args:
+            data: List of extracted document records.
+            filename: Output JSON file path. Defaults to `self.output_filename` if None.
+        """
         target_filename = filename or self.output_filename
         print(f"\nExporting files to json format at '{target_filename}'...\n")
         save_to_json(target_filename, data)
@@ -157,6 +222,21 @@ class DocsParser:
         self, output_filename: str, max_docs: int = -1, sync: bool = True,
         **kwargs: str | list[Applicant] | list[Position]
         ):
+        """Translate document contents to English and standardize JSON output structure.
+
+        Detects language of input JSON documents and translates Spanish values to English using Gemini API
+        while maintaining original JSON structure and keys.
+
+        Args:
+            output_filename: Output path for saving translated JSON documents.
+            max_docs: Maximum number of documents to process (-1 for all).
+            sync: If True, skip documents already present in the target output file.
+            **kwargs: Accepts either 'file_path' (path to JSON file) or 'docs' (list of doc dicts).
+
+        Raises:
+            ValueError: If `max_docs` is set to 0.
+            TypeError: If both 'file_path' and 'docs' are provided in kwargs.
+        """
 
         if max_docs == 0:
             raise ValueError("max_docs cannot be zero.")
