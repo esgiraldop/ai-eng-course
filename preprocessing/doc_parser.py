@@ -311,8 +311,4 @@ class DocsParser:
             # Brief rate limit pause
             time.sleep(0.2)
 
-        # Save standardized English JSON array
-        save_to_json(output_filename, processed_docs)
-
-        print(f"\nCompleted! Standardized English doc dataset saved to '{output_filename}'.")
-        
+        return processed_docs
