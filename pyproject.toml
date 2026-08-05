@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "chonkie[recursivechunker,semanticchunker,tokenchunker,wordchunker]>=1.7.0",
     "dotenv>=0.9.9",
     "groq>=1.5.0",
     "instructor[anthropic,google-genai]>=1.15.4",
