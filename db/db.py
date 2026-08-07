@@ -8,10 +8,8 @@ class DB:
     HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
 
     def __init__(self, model_name: str = "avsolatorio/GIST-all-MiniLM-L6-v2"):
-        print(self)
-
         self.client = QdrantClient(":memory:")
-        self.model = SentenceTransformer(model_name, token=self.HUGGING_FACE_API_KEY)
+        self.model = SentenceTransformer(model_name, token=self.HUGGING_FACE_API_KEY, trust_remote_code=True)
 
     def serialize_cv_for_embedding(self, cv: dict) -> str:
         """Formats CV text specifically for optimal embedding model vectorization."""
@@ -61,7 +59,7 @@ class DB:
                 "cv": cv
             })
 
-        return self.model.encode([dp["chunk"] for dp in data_points]).tolist()
+        return (data_points, self.model.encode([dp["chunk"] for dp in data_points]).tolist())
 
     def upload_db_points(self, data_points: list[Applicant], embeddings: list[list[float]], collection_name: str):
         
