@@ -46,18 +46,21 @@ class DB:
         
         return text
 
-    def embed_docs(self, docs: list[Applicant]) -> list[list[float]]:
+    def embed_docs(self, docs: list[Applicant], limit: int) -> list[list[float]]:
 
         data_points = []
 
         # No chunking applied since according to task_3/script_2.ipynb
         #   no chunking is the strategy with the best metrics
+        counter = 0
         for cv in docs:
+            if limit < 0 and counter == limit: break
             cv_text = self.serialize_cv_for_embedding(cv)
             data_points.append({
                 "chunk": cv_text,
                 "cv": cv
             })
+            counter += 1
 
         return (data_points, self.model.encode([dp["chunk"] for dp in data_points]).tolist())
 

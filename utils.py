@@ -15,3 +15,9 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
+
+def non_zero_int(value: int) -> int:
+  ivalue = int(value)
+  if ivalue == 0:
+    raise argparse.ArgumentTypeError("0 is not a valid value; must be non-zero")
+  return ivalue

@@ -4,7 +4,7 @@ from db.ingest_db import ingest_db
 import env_config  # noqa: F401
 from preprocessing.parse_docs import parse_docs
 import json
-from utils import str2bool
+from utils import str2bool, non_zero_int
 
 def run_offline_ingestion(args):
     model_name = "microsoft/harrier-oss-v1-0.6b"
@@ -24,7 +24,8 @@ def run_offline_ingestion(args):
         ingest_db(
             db = cvs_db,
             docs = cvs_eng,
-            collection_name = collection_name
+            collection_name = collection_name,
+            limit=args.ingest_db_limit
         )
 
     if args.query_db:
@@ -51,6 +52,12 @@ if __name__ == "__main__":
         type=str2bool,
         default=True,
         help="Whether to ingest data to the database or not (True/False).",
+    )
+    parser.add_argument(
+        "--ingest-db-limit",
+        type=non_zero_int,
+        default=-1,
+        help="Maximum number of records to embed and ingest. Used mostly for testing",
     )
     parser.add_argument(
         "--query-db",
