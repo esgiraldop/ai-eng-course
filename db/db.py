@@ -6,11 +6,11 @@ import os
 
 class DB:
 
-    HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
+    HUGGING_FACE_HUB_TOKEN = os.getenv("HUGGING_FACE_HUB_TOKEN")
 
     def __init__(self, model_name: str = "avsolatorio/GIST-all-MiniLM-L6-v2"):
         self.client = QdrantClient(":memory:")
-        self.model = SentenceTransformer(model_name, token=self.HUGGING_FACE_API_KEY, trust_remote_code=True)
+        self.model = SentenceTransformer(model_name, token=self.HUGGING_FACE_HUB_TOKEN, trust_remote_code=True)
 
     def serialize_cv_for_embedding(self, cv: dict) -> str:
         """Formats CV text specifically for optimal embedding model vectorization."""
