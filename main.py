@@ -31,11 +31,11 @@ def run_offline_ingestion(args):
     if args.query_db:
         job_desc = "Senior hybrid role in Medellín ($5M–7M COP/month) with 5+ years experience. Responsible for designing, deploying, and maintaining autonomous AI agents and low-code digital workflows using n8n, LangGraph, CrewAI, MCP, RAG, Python, and LLMs (GPT-4, Claude 3.5, Gemini). Connects APIs with legacy CRMs (Bitrix24, Zoho) and establishes productized SaaS formulas. Requires fluent technical English."
         # Querying db
-        cvs_db.query_db(
+        result = cvs_db.query_db(
             query= job_desc, collection_name = collection_name
             )
 
-        print(f"cvs_db: {cvs_db}")
+        print(f"result: {result}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

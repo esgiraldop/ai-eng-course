@@ -1,3 +1,4 @@
+from numpy import size
 from custom_types import Applicant
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient, models
@@ -54,7 +55,7 @@ class DB:
         #   no chunking is the strategy with the best metrics
         counter = 0
         for cv in docs:
-            if limit < 0 and counter == limit: break
+            if limit > 0 and counter >= limit: break
             cv_text = self.serialize_cv_for_embedding(cv)
             data_points.append({
                 "chunk": cv_text,
@@ -63,6 +64,15 @@ class DB:
             counter += 1
 
         return (data_points, self.model.encode([dp["chunk"] for dp in data_points]).tolist())
+
+    def create_collection(self, collection_name: str):
+        self.client.create_collection(
+        collection_name=collection_name,
+        vectors_config=models.VectorParams(
+            size=self.model.get_sentence_embedding_dimension(),
+            distance=models.Distance.COSINE
+        )
+    )
 
     def upload_db_points(self, data_points: list[Applicant], embeddings: list[list[float]], collection_name: str):
         
@@ -88,10 +98,8 @@ class DB:
             collection_name=collection_name,
             query=self.model.encode(query).tolist(),
             limit=k,
-            # The two parameters below are used when the data points are chunked
-            #   and the search groups by a field, in this case the email.
-            # group_by="email",
-            # group_size=1
+            group_by="email",
+            group_size=1
         )
 
         return [group["hits"][0] for group in result.model_dump()["groups"]]
