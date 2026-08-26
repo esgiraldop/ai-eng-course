@@ -3,13 +3,19 @@ from custom_types import Applicant
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient, models
 import os
+from dotenv import load_dotenv
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 class DB:
 
     HUGGING_FACE_HUB_TOKEN = os.getenv("HUGGING_FACE_HUB_TOKEN")
+    QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
     def __init__(self, model_name: str = "avsolatorio/GIST-all-MiniLM-L6-v2"):
-        self.client = QdrantClient(":memory:")
+        self.client = QdrantClient(
+            url="http://localhost:6333",
+            api_key=self.QDRANT_API_KEY
+            )
         self.model = SentenceTransformer(model_name, token=self.HUGGING_FACE_HUB_TOKEN, trust_remote_code=True)
 
     def serialize_cv_for_embedding(self, cv: dict) -> str:
@@ -66,13 +72,15 @@ class DB:
         return (data_points, self.model.encode([dp["chunk"] for dp in data_points]).tolist())
 
     def create_collection(self, collection_name: str):
-        self.client.create_collection(
-        collection_name=collection_name,
-        vectors_config=models.VectorParams(
-            size=self.model.get_sentence_embedding_dimension(),
-            distance=models.Distance.COSINE
-        )
-    )
+        try:
+            self.client.create_collection(
+            collection_name=collection_name,
+            vectors_config=models.VectorParams(
+                size=self.model.get_sentence_embedding_dimension(),
+                distance=models.Distance.COSINE
+            ))
+        except UnexpectedResponse:
+            print(f"Collection named {collection_name} was already created, so this step will be skipped.")
 
     def upload_db_points(self, data_points: list[Applicant], embeddings: list[list[float]], collection_name: str):
         

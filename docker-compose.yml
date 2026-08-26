@@ -1,0 +1,14 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    ports:
+      - "6333:6333" # REST API & Web UI
+    environment:
+      # Optional: set an API key for authentication
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
+    volumes:
+      - qdrant-storage:/qdrant/storage:z
+volumes:
+  qdrant-storage:

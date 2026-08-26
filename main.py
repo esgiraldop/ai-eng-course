@@ -1,7 +1,7 @@
+import env_config  # noqa: F401
 import argparse
 from db.db import DB
 from db.ingest_db import ingest_db
-import env_config  # noqa: F401
 from preprocessing.parse_docs import parse_docs
 import json
 from utils import str2bool, non_zero_int
